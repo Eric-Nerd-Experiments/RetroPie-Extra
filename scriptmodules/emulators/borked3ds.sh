@@ -27,7 +27,11 @@ function depends_borked3ds() {
     
     #for aarch64 and x86_64 these dependancies are the same
     #seems to work without, depends that are removed (not tested yet on x86): libc++-dev ffmpeg libavdevice-dev
-    local depends=(build-essential cmake clang clang-format libsdl2-dev libssl-dev qt6-l10n-tools qt6-tools-dev qt6-tools-dev-tools qt6-base-dev qt6-base-private-dev libxcb-cursor-dev libvulkan-dev qt6-multimedia-dev libqt6sql6 libasound2-dev xorg-dev libx11-dev libxext-dev libpipewire-0.3-dev libsndio-dev libgl-dev  libswscale-dev libavformat-dev libavcodec-dev libglut3.12 libglut-dev freeglut3-dev mesa-vulkan-drivers)
+    local depends=(build-essential cmake clang clang-format libsdl2-dev libssl-dev qt6-l10n-tools qt6-tools-dev 
+	    qt6-tools-dev-tools qt6-base-dev qt6-base-private-dev libxcb-cursor-dev libvulkan-dev qt6-multimedia-dev libqt6sql6 
+	    libasound2-dev xorg-dev libx11-dev libxext-dev libpipewire-0.3-dev libsndio-dev libgl-dev  libswscale-dev libavformat-dev 
+	    libavcodec-dev libglut3.12 libglut-dev freeglut3-dev mesa-vulkan-drivers
+	)
     #use libqt6core6t64 for Trixie or higher
     
     if compareVersions $__gcc_version lt 14; then
