@@ -11,6 +11,14 @@ Most of the scripts do work as is.
 
 **Starting 1-3-25 RetroPie version 4.8.9 or higher is needed**
 
+IF you are running the Offical image and have errors on not downloading drivers look here
+
+Youll have to update your repo sources since they were moved to the legacy server
+
+https://retropie.org.uk/forum/topic/37291/issues-with-retropie-4.x-buster-installations-of-packages-solved/2
+
+You need to update the setup-script and the Raspbian packages (configuration/tools > raspbiantools > upgrade raspbiantools) to apply the fix, --OR-- you can update the sources.list file manually with sudo sed -i 's#raspbian.raspberrypi.org#legacy.raspbian.org#' /etc/apt/sources.list, then use apt update to download the new lists.
+
 **I have not tested any of these on Trixie. Till i do, you are on your own. I have not have answers for you**
 
 This needed since the RetroPie helpers that will now being used will not work on older versions of RetroPie
