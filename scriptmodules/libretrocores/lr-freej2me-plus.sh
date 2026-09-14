@@ -5,7 +5,7 @@
 
 rp_module_id="lr-freej2me-plus"
 rp_module_desc="Java ME emulator - FreeJ2ME-Plus libretro core."
-rp_module_help="ROM Extensions: .jar .JAR\n\nCopy your Java ME (J2ME) ROMs to $romdir/j2me\n\nThe matching freej2me-lr.jar will be installed automatically in $biosdir."
+rp_module_help="ROM Extensions: .jar .JAR\n\nCopy your Java ME (J2ME) ROMs to $romdir/j2me\n\nThe matching freej2me_plus-lr.jar will be installed automatically in $biosdir."
 rp_module_licence="GPL3 https://raw.githubusercontent.com/TASEmulators/freej2me-plus/devel/LICENSE"
 rp_module_repo="git https://github.com/TASEmulators/freej2me-plus.git devel"
 rp_module_section="exp"
@@ -37,9 +37,10 @@ function build_lr-freej2me-plus() {
 
 function install_lr-freej2me-plus() {
     md_ret_files=(
-        'build/freej2me.jar'
-        'build/freej2me-lr.jar'
+        'build/freej2me_plus.jar'
+        'build/freej2me_plus-lr.jar'
         'src/libretro/retropie.txt'
+        'src/libretro/freej2me_plus_libretro.info'
         'src/libretro/freej2me_plus_libretro.so'
     )
 }
@@ -51,8 +52,8 @@ function configure_lr-freej2me-plus() {
     addEmulator 1 "$md_id" "j2me" "$md_inst/freej2me_plus_libretro.so"
     addSystem "j2me" "J2ME" ".jar .JAR"
 
-    # The libretro core starts freej2me-lr.jar from RetroArch's system directory.
+    # The libretro core starts freej2me_plus-lr.jar from RetroArch's system directory.
     # Keep the Java side matched to the native core installed by this module.
-    cp -v "$md_inst/freej2me-lr.jar" "$biosdir/freej2me-lr.jar"
-    chown "$user:$user" "$biosdir/freej2me-lr.jar"
+    cp -v "$md_inst/freej2me_plus-lr.jar" "$biosdir/freej2me_plus-lr.jar"
+    chown "$user:$user" "$biosdir/freej2me_plus-lr.jar"
 }
