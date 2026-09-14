@@ -28,7 +28,7 @@ function depends_mupen64plus-frameskip() {
 }
  
 function _stock_data_mupen64plus-frameskip() {
-    # Reuse the launcher/patch data shipped by RetroPie's stock mupen64plus
+    # Reuse the launcher shipped by RetroPie's stock mupen64plus module.
     # module. This keeps this custom module as a single independent .sh file.
     local sibling="${md_path%/*}/mupen64plus"
     local stock="$scriptdir/scriptmodules/emulators/mupen64plus"
@@ -147,7 +147,6 @@ function _pkg_info_mupen64plus-frameskip() {
 }
  
 function sources_mupen64plus-frameskip() {
-    local commit
     local repo
     while read repo; do
         repo=($repo)
@@ -238,6 +237,13 @@ function build_mupen64plus-frameskip() {
 function install_mupen64plus-frameskip() {
     local dir
     local params
+
+    # Remove GLideN64 artifacts left by versions of this module prior to the
+    # frameskip-only cleanup. Do not touch RetroPie's shared N64 config files.
+    rm -f \
+        "$md_inst/lib/mupen64plus/mupen64plus-video-GLideN64.so" \
+        "$md_inst/share/mupen64plus/GLideN64.custom.ini" \
+        "$md_inst/share/mupen64plus/GLideN64_config_version.ini"
 
     for dir in *; do
         if [[ -f "$dir/projects/unix/Makefile" ]]; then
