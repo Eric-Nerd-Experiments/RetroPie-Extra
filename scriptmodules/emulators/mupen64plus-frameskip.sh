@@ -251,17 +251,24 @@ function install_mupen64plus-frameskip() {
 }
 
 function configure_mupen64plus-frameskip() {
+    # Avoid disruptive fullscreen mode switches when launched from a desktop
+    # or KMS session by reusing Runcommand's current display resolution.
+    local res=0
+    if isPlatform "kms" || isPlatform "x11"; then
+        res="%XRES%x%YRES%"
+    fi
+
     # This module only adds the selectable frameskip variants. It deliberately
     # leaves RetroPie's normal Mupen64Plus emulator entries untouched.
     if _frameskip_video_supported_mupen64plus-frameskip; then
-        addEmulator 0 "${md_id}-glide64mk2-noframeskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-glide64mk2 %ROM% 0 0 --set Video-Glide64mk2[autoframeskip]\=False --set Video-Glide64mk2[maxframeskip]\=0"
+        addEmulator 0 "${md_id}-glide64mk2-noframeskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-glide64mk2 %ROM% $res 0 --set Video-Glide64mk2[autoframeskip]\=False --set Video-Glide64mk2[maxframeskip]\=0"
         local fs
         for fs in 1 2 3 4 5; do
-            addEmulator 0 "${md_id}-glide64mk2-frameskip-${fs}" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-glide64mk2 %ROM% 0 0 --set Video-Glide64mk2[autoframeskip]\=True --set Video-Glide64mk2[maxframeskip]\=${fs}"
+            addEmulator 0 "${md_id}-glide64mk2-frameskip-${fs}" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-glide64mk2 %ROM% $res 0 --set Video-Glide64mk2[autoframeskip]\=True --set Video-Glide64mk2[maxframeskip]\=${fs}"
         done
 
-        addEmulator 0 "${md_id}-rice-noframeskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-rice %ROM% 0 0 --set Video-Rice[SkipFrame]\=False"
-        addEmulator 0 "${md_id}-rice-frameskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-rice %ROM% 0 0 --set Video-Rice[SkipFrame]\=True"
+        addEmulator 0 "${md_id}-rice-noframeskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-rice %ROM% $res 0 --set Video-Rice[SkipFrame]\=False"
+        addEmulator 0 "${md_id}-rice-frameskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-rice %ROM% $res 0 --set Video-Rice[SkipFrame]\=True"
     fi
 
     addSystem "n64"
