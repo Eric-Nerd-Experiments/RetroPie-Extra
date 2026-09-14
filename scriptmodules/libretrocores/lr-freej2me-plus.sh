@@ -20,11 +20,11 @@ function sources_lr-freej2me-plus() {
 }
 
 function build_lr-freej2me-plus() {
-    # Upstream still targets Java 6 and references rt.jar. Modern JDKs no longer
-    # ship rt.jar and reject source/target 1.6, so build the Java side as Java 8
-    # and let javac use the current platform classes.
-    sed -i 's/<property name="source.version" value="1\.6"\/>/<property name="source.version" value="1.8"\/>/' build.xml
-    sed -i 's/<property name="target.version" value="1\.6"\/>/<property name="target.version" value="1.8"\/>/' build.xml
+    # Upstream targets an obsolete Java version and references rt.jar. Modern
+    # JDKs no longer ship rt.jar, so build the Java side as Java 8 regardless
+    # of the legacy source/target version currently declared upstream.
+    sed -i 's/<property name="source.version" value="[^"]*"\/>/<property name="source.version" value="1.8"\/>/' build.xml
+    sed -i 's/<property name="target.version" value="[^"]*"\/>/<property name="target.version" value="1.8"\/>/' build.xml
     sed -i '/bootclasspath="${java.home}\/lib\/rt.jar"/d' build.xml
 
     ant
