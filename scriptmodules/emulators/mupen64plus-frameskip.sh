@@ -18,19 +18,17 @@ rp_module_section="main"
 rp_module_flags="sdl2 nodistcc"
  
 function depends_mupen64plus-frameskip() {
-    local depends=(cmake libsamplerate0-dev libspeexdsp-dev libsdl2-dev libpng-dev libfreetype6-dev fonts-freefont-ttf libboost-filesystem-dev)
-    isPlatform "rpi" && depends+=(libraspberrypi-bin libraspberrypi-dev)
+    local depends=(libsamplerate0-dev libspeexdsp-dev libsdl2-dev libpng-dev libfreetype6-dev fonts-freefont-ttf libglu1-mesa-dev)
+    isPlatform "videocore" && depends+=(libraspberrypi-dev)
     isPlatform "mesa" && depends+=(libgles2-mesa-dev)
     isPlatform "gl" && depends+=(libglew-dev libglu1-mesa-dev)
     isPlatform "x86" && depends+=(nasm)
     isPlatform "vero4k" && depends+=(vero3-userland-dev-osmc)
-    # was a vero4k only line - I think it's not needed or can use a smaller subset of boost
-    isPlatform "osmc" && depends+=(libboost-all-dev)
     getDepends "${depends[@]}"
 }
  
 function _stock_data_mupen64plus-frameskip() {
-    # Reuse the launcher/patch data shipped by RetroPie's stock mupen64plus
+    # Reuse the launcher shipped by RetroPie's stock mupen64plus module.
     # module. This keeps this custom module as a single independent .sh file.
     local sibling="${md_path%/*}/mupen64plus"
     local stock="$scriptdir/scriptmodules/emulators/mupen64plus"
@@ -81,19 +79,6 @@ function _get_repos_mupen64plus-frameskip() {
         )
     fi
  
-    local commit=""
-    # GLideN64 now requires cmake 3.9 so use an older commit as a workaround for systems with older cmake (pre buster).
-    # Test using "apt-cache madison" as this code could be called when cmake isn't yet installed but correct version
-    # is available - eg via update check with builder module which removes dependencies after building.
-    # Multiple versions may be available, so grab the versions via cut, sort by version, take the latest from the top
-    # and pipe to xargs to strip whitespace
-    local cmake_ver=$(apt-cache madison cmake | cut -d\| -f2 | sort --version-sort | head -1 | xargs)
-    if compareVersions "$cmake_ver" lt 3.9; then
-        commit="8a9d52b41b33d853445f0779dd2b9f5ec4ecdda8"
-    fi
-    repos+=("gonetz GLideN64 master 5bbf55df8c61ab86b5e41a97906bc99ce9b00a36")
- 
- 
     local repo
     for repo in "${repos[@]}"; do
         echo "$repo"
@@ -128,7 +113,7 @@ function _pkg_info_mupen64plus-frameskip() {
             local hash
             while read repo; do
                 repo=($repo)
-                # if we have any repos set to a specific git hash (eg GLideN64 then we use that) otherwise check
+                # Use a pinned hash when a repository entry provides one.
                 if [[ -n "${repo[3]}" ]]; then
                     hash="${repo[3]}"
                 else
@@ -162,20 +147,12 @@ function _pkg_info_mupen64plus-frameskip() {
 }
  
 function sources_mupen64plus-frameskip() {
-    local commit
     local repo
     while read repo; do
         repo=($repo)
         gitPullOrClone "$md_build/${repo[1]}" https://github.com/${repo[0]}/${repo[1]} ${repo[2]} ${repo[3]}
     done < <(_get_repos_mupen64plus-frameskip)
  
-    if isPlatform "videocore"; then
-        # workaround for shader cache crash issue on Raspbian stretch. See: https://github.com/gonetz/GLideN64/issues/1665
-        applyPatch "$(_stock_data_mupen64plus-frameskip)/0001-GLideN64-use-emplace.patch"
-    fi
- 
-    local config_version=$(grep -oP '(?<=CONFIG_VERSION_CURRENT ).+?(?=U)' GLideN64/src/Config.h)
-    echo "$config_version" > "$md_build/GLideN64_config_version.ini"
 }
  
 function _params_mupen64plus-frameskip() {
@@ -199,7 +176,11 @@ function _params_mupen64plus-frameskip() {
     isPlatform "x86" && params+=("SSE=SSE2")
     isPlatform "armv6" && params+=("HOST_CPU=armv6")
     isPlatform "armv7" && params+=("HOST_CPU=armv7")
+    isPlatform "armv8" && params+=("HOST_CPU=armv8")
     isPlatform "aarch64" && params+=("HOST_CPU=aarch64")
+
+    # RetroPie's console frontend does not provide a Vulkan renderer.
+    params+=("VULKAN=0")
 
     # Build Glide64mk2 with its legacy frameskipper on every supported target.
     [[ "$dir" == "mupen64plus-video-glide64mk2" ]] && params+=("USE_FRAMESKIPPER=1")
@@ -221,22 +202,6 @@ function build_mupen64plus-frameskip() {
         fi
     done
 
-    # build GLideN64
-    "$md_build/GLideN64/src/getRevision.sh"
-    pushd "$md_build/GLideN64/projects/cmake"
-
-    params=("-DMUPENPLUSAPI=On" "-DVEC4_OPT=On" "-DUSE_SYSTEM_LIBS=On")
-    isPlatform "neon" && params+=("-DNEON_OPT=On")
-    isPlatform "mesa" && params+=("-DMESA=On" "-DEGL=On")
-    isPlatform "vero4k" && params+=("-DVERO4K=On")
-    isPlatform "armv8" && params+=("-DCRC_ARMV8=On")
-    isPlatform "mali" && params+=("-DVERO4K=On" "-DCRC_OPT=On" "-DEGL=On")
-    isPlatform "x86" && params+=("-DCRC_OPT=On")
-
-    cmake "${params[@]}" ../../src/
-    make
-    popd
-
     rpSwap off
     md_ret_require=(
         'mupen64plus-ui-console/projects/unix/mupen64plus'
@@ -244,7 +209,6 @@ function build_mupen64plus-frameskip() {
         'mupen64plus-audio-sdl/projects/unix/mupen64plus-audio-sdl.so'
         'mupen64plus-input-sdl/projects/unix/mupen64plus-input-sdl.so'
         'mupen64plus-rsp-hle/projects/unix/mupen64plus-rsp-hle.so'
-        'GLideN64/projects/cmake/plugin/Release/mupen64plus-video-GLideN64.so'
     )
 
     if isPlatform "videocore" && ! isPlatform "64bit"; then
@@ -274,6 +238,13 @@ function install_mupen64plus-frameskip() {
     local dir
     local params
 
+    # Remove GLideN64 artifacts left by versions of this module prior to the
+    # frameskip-only cleanup. Do not touch RetroPie's shared N64 config files.
+    rm -f \
+        "$md_inst/lib/mupen64plus/mupen64plus-video-GLideN64.so" \
+        "$md_inst/share/mupen64plus/GLideN64.custom.ini" \
+        "$md_inst/share/mupen64plus/GLideN64_config_version.ini"
+
     for dir in *; do
         if [[ -f "$dir/projects/unix/Makefile" ]]; then
             params=($(_params_mupen64plus-frameskip "$dir"))
@@ -281,26 +252,29 @@ function install_mupen64plus-frameskip() {
         fi
     done
 
-    cp "$md_build/GLideN64/ini/GLideN64.custom.ini" "$md_inst/share/mupen64plus/"
-    cp "$md_build/GLideN64/projects/cmake/plugin/Release/mupen64plus-video-GLideN64.so" "$md_inst/lib/mupen64plus/"
-    cp "$md_build/GLideN64_config_version.ini" "$md_inst/share/mupen64plus/"
-
     # remove default InputAutoConfig.ini. inputconfigscript writes a clean file
     rm -f "$md_inst/share/mupen64plus/InputAutoCfg.ini"
 }
 
 function configure_mupen64plus-frameskip() {
+    # Avoid disruptive fullscreen mode switches when launched from a desktop
+    # or KMS session by reusing Runcommand's current display resolution.
+    local res=0
+    if isPlatform "kms" || isPlatform "x11"; then
+        res="%XRES%x%YRES%"
+    fi
+
     # This module only adds the selectable frameskip variants. It deliberately
     # leaves RetroPie's normal Mupen64Plus emulator entries untouched.
     if _frameskip_video_supported_mupen64plus-frameskip; then
-        addEmulator 0 "${md_id}-glide64mk2-noframeskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-glide64mk2 %ROM% 0 0 --set Video-Glide64mk2[autoframeskip]\=False --set Video-Glide64mk2[maxframeskip]\=0"
+        addEmulator 0 "${md_id}-glide64mk2-noframeskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-glide64mk2 %ROM% $res 0 --set Video-Glide64mk2[autoframeskip]\=False --set Video-Glide64mk2[maxframeskip]\=0"
         local fs
         for fs in 1 2 3 4 5; do
-            addEmulator 0 "${md_id}-glide64mk2-frameskip-${fs}" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-glide64mk2 %ROM% 0 0 --set Video-Glide64mk2[autoframeskip]\=True --set Video-Glide64mk2[maxframeskip]\=${fs}"
+            addEmulator 0 "${md_id}-glide64mk2-frameskip-${fs}" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-glide64mk2 %ROM% $res 0 --set Video-Glide64mk2[autoframeskip]\=True --set Video-Glide64mk2[maxframeskip]\=${fs}"
         done
 
-        addEmulator 0 "${md_id}-rice-noframeskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-rice %ROM% 0 0 --set Video-Rice[SkipFrame]\=False"
-        addEmulator 0 "${md_id}-rice-frameskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-rice %ROM% 0 0 --set Video-Rice[SkipFrame]\=True"
+        addEmulator 0 "${md_id}-rice-noframeskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-rice %ROM% $res 0 --set Video-Rice[SkipFrame]\=False"
+        addEmulator 0 "${md_id}-rice-frameskip" "n64" "$md_inst/bin/mupen64plus.sh mupen64plus-video-rice %ROM% $res 0 --set Video-Rice[SkipFrame]\=True"
     fi
 
     addSystem "n64"
@@ -344,7 +318,7 @@ function configure_mupen64plus-frameskip() {
         su "$cfg_user" -c "$cmd"
     fi
  
-    # RPI main/GLideN64 settings
+        # Raspberry Pi display and audio settings
     if isPlatform "rpi"; then
         iniConfig " = " "" "$config"
         # VSync is mandatory for good performance on KMS
@@ -354,39 +328,18 @@ function configure_mupen64plus-frameskip() {
             fi
             iniSet "VerticalSync" "True"
         fi
-        # Create GlideN64 section in .cfg
-        if ! grep -q "\[Video-GLideN64\]" "$config"; then
-            echo "[Video-GLideN64]" >> "$config"
-        fi
-        # Settings version. Don't touch it.
-        iniSet "configVersion" "17"
-        # Bilinear filtering mode (0=N64 3point, 1=standard)
-        iniSet "bilinearMode" "1"
-        iniSet "EnableFBEmulation" "True"
-        # Use native res
-        iniSet "UseNativeResolutionFactor" "1"
-        # Enable legacy blending
-        iniSet "EnableLegacyBlending" "True"
-        # Enable Threaded GL calls
-        iniSet "ThreadedVideo" "True"
-        # Swap frame buffers On buffer update (most performant)
-        iniSet "BufferSwapMode" "2"
-        # Disable hybrid upscaling filter (needs better GPU)
-        iniSet "EnableHybridFilter" "False"
-        # Use fast but less accurate shaders. Can help with low-end GPUs.
-        iniSet "EnableInaccurateTextureCoordinates" "True"
- 
         if isPlatform "videocore"; then
             setAutoConf mupen64plus_audio 1
-            setAutoConf mupen64plus_compatibility_check 1
         elif isPlatform "mesa"; then
             setAutoConf mupen64plus_audio 0
-            setAutoConf mupen64plus_compatibility_check 0
         fi
     else
         addAutoConf mupen64plus_audio 0
-        addAutoConf mupen64plus_compatibility_check 0
     fi
+
+    # The stock launcher may redirect Rice to GLideN64 for some games. This
+    # independent build intentionally contains no GLideN64 plugin.
+    addAutoConf mupen64plus_compatibility_check 0
  
     addAutoConf mupen64plus_hotkeys 1
     addAutoConf mupen64plus_texture_packs 1
